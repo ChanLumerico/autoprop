@@ -1,9 +1,11 @@
-from typing import List, Literal, Dict, Self, Any
+from typing import List, Literal, Dict, Self, Any, Tuple
 from collections import deque
 import numpy as np
 
 from luma.interface.typing import TensorLike
 from luma.interface.exception import NotFittedError
+from luma.interface.util import Clone
+from luma.core.super import Optimizer
 from luma.neural.layer import LayerLike
 
 
@@ -69,9 +71,17 @@ class LayerNode:
                 d_out_arr.append(d_out)
 
         return d_out_arr
-    
+
     def update(self) -> None:
         self.layer.update()
+
+    def set_optimizer(self, optimizer: Optimizer, **params: Any) -> None:
+        if hasattr(self.layer, "set_optimizer"):
+            self.layer.set_optimizer(optimizer, **params)
+        else:
+            optim: Optimizer = Clone(optimizer).get
+            optim.set_params(**params)
+            self.layer.optimizer = optim
 
     def flush(self) -> None:
         self.n_forward, self.n_backward = 0, 0
@@ -80,6 +90,13 @@ class LayerNode:
 
         self.f_visited = False
         self.b_visited = False
+
+    @property
+    def param_size(self) -> Tuple[int, int]:
+        return self.layer.param_size
+
+    def out_shape(self, in_shape: tuple[int]) -> tuple[int]:
+        return self.layer.out_shape(in_shape)
 
     def __call__(self, is_train: bool = False) -> TensorLike:
         return self.forward(is_train)
@@ -202,7 +219,6 @@ class LayerGraph:
 
         if visited != set(self.nodes):
             raise RuntimeError(f"'{self}' is not fully connected!")
-
         if self.detect_cycle():
             raise RuntimeError(f"'{self}' contains a cycle!")
 
@@ -233,6 +249,11 @@ class LayerGraph:
 
         return False
 
+    def set_optimizer(self, optimizer: Optimizer, **params: Any) -> None:
+        self.check_is_built()
+        for node in self.nodes:
+            node.set_optimizer(optimizer, **params)
+
     def forward(self, X: TensorLike, is_train: bool = False) -> TensorLike:
         self.check_is_built()
         return self._forward_bfs(X, is_train)
@@ -240,8 +261,9 @@ class LayerGraph:
     def backward(self, d_out: TensorLike) -> TensorLike:
         self.check_is_built()
         return self._backward_bfs(d_out)
-    
+
     def update(self) -> None:
+        self.check_is_built()
         for node in self.nodes:
             node.update()
 
@@ -317,7 +339,20 @@ class LayerGraph:
         self.graph.clear()
         self.nodes.clear()
         self.built_ = False
-    
+
+    @property
+    def param_size(self) -> Tuple[int, int]:
+        w_size, b_size = 0, 0
+        for node in self.nodes:
+            w_, b_ = node.param_size
+            w_size += w_
+            b_size += b_
+
+        return w_size, b_size
+
+    def out_shape(self, in_shape: tuple[int]) -> tuple[int]:
+        return self.term.out_shape(in_shape)
+
     def __add__(self, other: Any) -> Self:
         if not isinstance(other, LayerGraph):
             raise ValueError(f"Can only add another 'LayerGraph'!")
@@ -330,13 +365,13 @@ class LayerGraph:
                 merged_graph[node].extend(edges)
             else:
                 merged_graph[node] = edges
-        
+
         new_graph.graph = merged_graph
         if self.term in new_graph.graph:
             new_graph[self.term].append(other.root)
         else:
             new_graph.graph[self.term] = list(other.root)
-        
+
         new_graph.root = self.root
         new_graph.term = other.term
 
