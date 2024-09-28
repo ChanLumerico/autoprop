@@ -93,6 +93,13 @@ class LayerNode:
     def param_size(self) -> Tuple[int, int]:
         return self.layer.param_size
 
+    @property
+    def n_layers(self) -> int:
+        if hasattr(self.layer, "n_layers"):
+            return self.layer.n_layers
+        else:
+            return 1
+
     def out_shape(self, in_shape: tuple[int]) -> tuple[int]:
         return self.layer.out_shape(in_shape)
 
@@ -355,6 +362,13 @@ class LayerGraph(LayerLike):
             b_size += b_
 
         return w_size, b_size
+
+    @property
+    def n_layers(self) -> int:
+        layer_cnt = 0
+        for node in self.nodes:
+            layer_cnt += node.n_layers
+        return layer_cnt
 
     def out_shape(self, in_shape: tuple[int]) -> tuple[int]:
         return self.term.out_shape(in_shape)
