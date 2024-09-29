@@ -94,9 +94,9 @@ class LayerNode:
         return self.layer.param_size
 
     @property
-    def n_layers(self) -> int:
-        if hasattr(self.layer, "n_layers"):
-            return self.layer.n_layers
+    def layer_count(self) -> int:
+        if hasattr(self.layer, "layer_count"):
+            return self.layer.layer_count
         else:
             return 1
 
@@ -364,10 +364,10 @@ class LayerGraph(LayerLike):
         return w_size, b_size
 
     @property
-    def n_layers(self) -> int:
+    def layer_count(self) -> int:
         layer_cnt = 0
         for node in self.nodes:
-            layer_cnt += node.n_layers
+            layer_cnt += node.layer_count
         return layer_cnt
 
     def out_shape(self, in_shape: tuple[int]) -> tuple[int]:
