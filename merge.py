@@ -62,8 +62,10 @@ class MergeMode(Enum):
                 return d_out
 
             case MergeMode.HADAMARD:
-                total_prod = np.prod(f_queue, axis=0)
-                prod_except_current = total_prod / f_queue[i]
+                prod_except_current = np.ones_like(f_queue[0])
+                for j in range(len(f_queue)):
+                    if j != i:
+                        prod_except_current *= f_queue[j]
                 return d_out * prod_except_current
 
             case MergeMode.AVG:
