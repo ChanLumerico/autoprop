@@ -401,6 +401,9 @@ class LayerGraph(LayerLike):
 
         return new_graph
 
+    def __call__(self, X: TensorLike, is_train: bool = False) -> TensorLike:
+        return self.forward(X, is_train)
+
     def __bool__(self) -> bool:
         return self.built_
 
