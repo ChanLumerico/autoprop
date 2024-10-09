@@ -159,6 +159,8 @@ class LayerGraph(LayerLike):
                 all_nodes.add(v)
         self.nodes = list(all_nodes)
 
+    def init_node(self) -> None: ...
+
     def add_node(
         self,
         node: LayerNode,
