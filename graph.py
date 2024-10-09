@@ -7,6 +7,8 @@ from luma.interface.util import Clone
 from luma.interface.exception import NotFittedError
 from luma.core.super import Optimizer
 
+from luma.neural import layer as nl
+
 from .merge import MergeMode
 
 
@@ -121,6 +123,16 @@ class LayerNode:
 
     def __hash__(self) -> int:
         return hash((self.name, self.layer))
+
+
+class SequentialNode(LayerNode):
+    def __init__(
+        self,
+        *layers: LayerLike,
+        merge_mode: MergeMode = MergeMode.SUM,
+        name: str | None = None,
+    ) -> None:
+        super().__init__(nl.Sequential(*layers), merge_mode, name)
 
 
 class LayerGraph(LayerLike):
