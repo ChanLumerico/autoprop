@@ -371,7 +371,10 @@ class LayerGraph(LayerLike):
     def param_size(self) -> Tuple[int, int]:
         w_size, b_size = 0, 0
         for node in self.nodes:
-            w_, b_ = node.param_size
+            param_size = node.param_size
+            if param_size is NotImplemented:
+                continue
+            w_, b_ = param_size
             w_size += w_
             b_size += b_
 
